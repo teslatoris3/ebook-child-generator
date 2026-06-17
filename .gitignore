@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+
+# Generated books (keep the folder, not its contents)
+/output/*
+!/output/.gitkeep
+
+# Local font binaries (keep the folder)
+/assets/fonts/*
+!/assets/fonts/.gitkeep
+
+# Models live in ~/models, never in-repo
+/models/
+
+# OS / editor
+.DS_Store
+*.swp
