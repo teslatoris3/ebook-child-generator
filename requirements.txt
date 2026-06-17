@@ -1,0 +1,17 @@
+# Kids Ebook Generator — v1 dependencies
+#
+# torch is intentionally NOT pinned here: it is provided by the conda env
+# (base already has torch 2.10.0+cu128 with working CUDA). Installing torch via
+# pip here could clobber that CUDA build.
+#
+# Installed into the existing `base` conda env (disk is tight; see PLAN.md note).
+
+diffusers
+transformers
+accelerate
+safetensors
+peft
+llama-cpp-python
+pillow
+gradio
+huggingface_hub
