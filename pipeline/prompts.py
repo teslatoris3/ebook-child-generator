@@ -18,32 +18,40 @@ NEGATIVE_PROMPT = (
 
 
 def character_sheet(answers: "Answers") -> str:
-    """Frozen visual description of the hero child, reused on every page.
-
-    e.g. "a little girl with blonde hair and light skin, big friendly eyes".
-    TODO: build from PRONOUN_DESC[pronoun] + hair_color + skin_tone.
-    """
-    raise NotImplementedError
+    """Frozen visual description of the hero child, reused on every page."""
+    from .questionnaire import PRONOUN_DESC
+    desc = PRONOUN_DESC[answers.pronoun]
+    return (
+        f"{desc} with {answers.hair_color} hair and {answers.skin_tone} skin, "
+        "big friendly eyes, cheerful expression"
+    )
 
 
 def companion_desc(answers: "Answers") -> str:
-    """Soft-consistent description of the favourite-animal companion.
-
-    TODO: short stable phrase, e.g. "a friendly little dragon companion".
-    """
-    raise NotImplementedError
+    """Soft-consistent description of the favourite-animal companion."""
+    return f"a friendly little {answers.favourite_animal} companion"
 
 
 def page_image_prompt(beat: str, answers: "Answers") -> str:
-    """Compose the full positive prompt for one page's illustration.
-
-    Layout: ``<art style>, <character sheet>, <companion>, <scene from beat>,
-    in a <setting>, children's book illustration``.
-    TODO: assemble using character_sheet/companion_desc + ART_STYLE_FRAGMENT.
-    """
-    raise NotImplementedError
+    """Full positive prompt for one page's illustration."""
+    from .questionnaire import ART_STYLE_FRAGMENT
+    style = ART_STYLE_FRAGMENT[answers.art_style]
+    hero = character_sheet(answers)
+    companion = companion_desc(answers)
+    return (
+        f"{style}, {hero}, {companion}, {beat}, "
+        f"in a {answers.setting}, children's book illustration, "
+        "soft lighting, vibrant colors, whimsical"
+    )
 
 
 def cover_image_prompt(title: str, answers: "Answers") -> str:
-    """Prompt for the cover hero shot. TODO: hero front-and-center, titley framing."""
-    raise NotImplementedError
+    """Prompt for the cover hero shot — child front-and-center."""
+    from .questionnaire import ART_STYLE_FRAGMENT
+    style = ART_STYLE_FRAGMENT[answers.art_style]
+    hero = character_sheet(answers)
+    return (
+        f"{style}, {hero}, centered composition, front-facing, "
+        f"title page illustration, magical {answers.setting}, "
+        "children's book cover art, vibrant, welcoming"
+    )

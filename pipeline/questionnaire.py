@@ -63,12 +63,26 @@ class Answers:
     art_style: str
 
     def validate(self) -> None:
-        """Raise ``ValueError`` if any dropdown value is out of its catalog.
-
-        TODO: implement (check each field against its catalog; require a non-empty
-        child_name; sanitize the name for filesystem use).
-        """
-        raise NotImplementedError
+        """Raise ``ValueError`` if any dropdown value is out of its catalog."""
+        if not self.child_name.strip():
+            raise ValueError("child_name cannot be empty")
+        safe = "".join(c for c in self.child_name if c.isalnum() or c in " _-").strip()
+        if not safe:
+            raise ValueError(f"child_name {self.child_name!r} contains no filesystem-safe characters")
+        catalogs: list[tuple[str, list[str]]] = [
+            ("pronoun", PRONOUNS),
+            ("hair_color", HAIR_COLORS),
+            ("skin_tone", SKIN_TONES),
+            ("favourite_animal", ANIMALS),
+            ("loved_one", LOVED_ONES),
+            ("theme", THEMES),
+            ("setting", SETTINGS),
+            ("art_style", ART_STYLES),
+        ]
+        for field_name, catalog in catalogs:
+            value = getattr(self, field_name)
+            if value not in catalog:
+                raise ValueError(f"{field_name}={value!r} must be one of {catalog}")
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
