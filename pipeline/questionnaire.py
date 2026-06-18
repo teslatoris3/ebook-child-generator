@@ -62,13 +62,28 @@ class Answers:
     setting: str
     art_style: str
 
-    def validate(self) -> None:
-        """Raise ``ValueError`` if any dropdown value is out of its catalog.
+    _UNSAFE_FS_CHARS = frozenset(r'\/:*?"<>|')
 
-        TODO: implement (check each field against its catalog; require a non-empty
-        child_name; sanitize the name for filesystem use).
-        """
-        raise NotImplementedError
+    def validate(self) -> None:
+        """Raise ``ValueError`` if any dropdown value is out of its catalog."""
+        if not self.child_name or not self.child_name.strip():
+            raise ValueError("child_name must not be empty")
+        if any(c in self._UNSAFE_FS_CHARS for c in self.child_name):
+            raise ValueError(f"child_name contains filesystem-unsafe character: {self.child_name!r}")
+
+        catalog_checks = [
+            ("pronoun", self.pronoun, PRONOUNS),
+            ("hair_color", self.hair_color, HAIR_COLORS),
+            ("skin_tone", self.skin_tone, SKIN_TONES),
+            ("favourite_animal", self.favourite_animal, ANIMALS),
+            ("loved_one", self.loved_one, LOVED_ONES),
+            ("theme", self.theme, THEMES),
+            ("setting", self.setting, SETTINGS),
+            ("art_style", self.art_style, ART_STYLES),
+        ]
+        for field, value, catalog in catalog_checks:
+            if value not in catalog:
+                raise ValueError(f"{field}={value!r} is not in the allowed catalog")
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)

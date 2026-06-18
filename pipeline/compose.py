@@ -5,38 +5,82 @@ page is prepended. All pages are combined into a single PDF.
 """
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import Sequence
 
-if TYPE_CHECKING:
-    from PIL.Image import Image
-    from PIL.ImageFont import FreeTypeFont
-
-
-def load_font(fonts_dir: Path, size: int) -> "FreeTypeFont":
-    """Load the bundled kid-friendly font at ``size``.
-
-    TODO: pick a bundled .ttf from fonts_dir; fall back to ImageFont.load_default().
-    """
-    raise NotImplementedError
+from PIL import Image, ImageDraw, ImageFont
+import PIL.JpegImagePlugin   # force JPEG encoder registration for PDF export
+import PIL.Jpeg2KImagePlugin  # force JPEG2000 encoder registration for PDF export
 
 
-def compose_page(image: "Image", stanza: str, font: "FreeTypeFont") -> "Image":
-    """Draw ``stanza`` onto a copy of ``image`` (text band) -> composited page.
-
-    TODO: add a semi-opaque band, word-wrap the stanza, center it, return image.
-    """
-    raise NotImplementedError
-
-
-def make_cover(title: str, child_name: str, hero_image: "Image", font: "FreeTypeFont") -> "Image":
-    """Build the cover page from the hero image + title + "A story for <name>". TODO."""
-    raise NotImplementedError
+def load_font(fonts_dir: Path, size: int) -> ImageFont.FreeTypeFont:
+    """Load a bundled .ttf from fonts_dir at size; fall back to Pillow default."""
+    for ttf in sorted(fonts_dir.glob("*.ttf")):
+        try:
+            return ImageFont.truetype(str(ttf), size=size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
 
 
-def to_pdf(pages: Sequence["Image"], out_path: Path) -> Path:
-    """Combine composited pages (cover first) into a single PDF at ``out_path``.
+def compose_page(image: Image.Image, stanza: str, font: ImageFont.FreeTypeFont) -> Image.Image:
+    """Draw stanza onto a copy of image in a semi-opaque bottom band."""
+    page = image.copy().convert("RGB")
+    w, h = page.size
+    band_h = max(80, h // 4)
 
-    TODO: pages[0].save(out_path, save_all=True, append_images=pages[1:]).
-    """
-    raise NotImplementedError
+    band = Image.new("RGBA", (w, band_h), (0, 0, 0, 160))
+    base = page.convert("RGBA")
+    base.paste(band, (0, h - band_h), band)
+    page = base.convert("RGB")
+
+    draw = ImageDraw.Draw(page)
+    wrapped = textwrap.fill(stanza, width=40)
+    draw.multiline_text(
+        (w // 2, h - band_h + 10),
+        wrapped,
+        font=font,
+        fill=(255, 255, 255),
+        anchor="ma",
+        align="center",
+    )
+    return page
+
+
+def make_cover(title: str, child_name: str, hero_image: Image.Image, font: ImageFont.FreeTypeFont) -> Image.Image:
+    """Cover page: hero image with title + 'A story for <name>' overlaid."""
+    cover = hero_image.copy().convert("RGB")
+    w, h = cover.size
+    draw = ImageDraw.Draw(cover)
+
+    draw.multiline_text(
+        (w // 2, h // 8),
+        title,
+        font=font,
+        fill=(255, 255, 255),
+        anchor="ma",
+        align="center",
+    )
+    draw.text(
+        (w // 2, h // 8 + 40),
+        f"A story for {child_name}",
+        font=font,
+        fill=(220, 220, 220),
+        anchor="ma",
+    )
+    return cover
+
+
+def to_pdf(pages: Sequence[Image.Image], out_path: Path) -> Path:
+    """Combine composited pages (cover first) into a single PDF."""
+    if not pages:
+        raise ValueError("to_pdf requires at least one page")
+    # RGBA uses JPXDecode in Pillow's PDF plugin, avoiding the JPEG dependency.
+    rgba_pages = [p.convert("RGBA") for p in pages]
+    rgba_pages[0].save(
+        out_path,
+        save_all=True,
+        append_images=rgba_pages[1:],
+    )
+    return out_path
