@@ -68,6 +68,17 @@ def test_to_pdf_has_pdf_magic_bytes(tmp_path, tiny_image):
     assert out.read_bytes()[:4] == b"%PDF"
 
 
+def test_to_pdf_does_not_use_jpeg2000(tmp_path, tiny_image):
+    """JPXDecode (JPEG2000) pages render as 'corrupted' in most viewers.
+
+    Pages must be embedded with a widely-supported filter (DCT/Flate), so the
+    JPXDecode signature must be absent from the output.
+    """
+    out = tmp_path / "book.pdf"
+    compose.to_pdf([tiny_image, tiny_image], out)
+    assert b"JPXDecode" not in out.read_bytes()
+
+
 def test_to_pdf_single_page(tmp_path, tiny_image):
     out = tmp_path / "single.pdf"
     compose.to_pdf([tiny_image], out)

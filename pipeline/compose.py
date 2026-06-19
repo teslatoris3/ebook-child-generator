@@ -11,7 +11,6 @@ from typing import Sequence
 
 from PIL import Image, ImageDraw, ImageFont
 import PIL.JpegImagePlugin   # force JPEG encoder registration for PDF export
-import PIL.Jpeg2KImagePlugin  # force JPEG2000 encoder registration for PDF export
 
 
 def load_font(fonts_dir: Path, size: int) -> ImageFont.FreeTypeFont:
@@ -76,11 +75,12 @@ def to_pdf(pages: Sequence[Image.Image], out_path: Path) -> Path:
     """Combine composited pages (cover first) into a single PDF."""
     if not pages:
         raise ValueError("to_pdf requires at least one page")
-    # RGBA uses JPXDecode in Pillow's PDF plugin, avoiding the JPEG dependency.
-    rgba_pages = [p.convert("RGBA") for p in pages]
-    rgba_pages[0].save(
+    # Embed as RGB. RGBA would force Pillow's JPXDecode (JPEG2000) path, which
+    # most PDF viewers reject as "corrupted"; RGB uses widely-supported DCT/Flate.
+    rgb_pages = [p.convert("RGB") for p in pages]
+    rgb_pages[0].save(
         out_path,
         save_all=True,
-        append_images=rgba_pages[1:],
+        append_images=rgb_pages[1:],
     )
     return out_path
