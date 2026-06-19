@@ -8,6 +8,7 @@ rhyme examples in the system prompt replace the (cut) RAG corpus.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .device import DevicePolicy
@@ -16,6 +17,19 @@ if TYPE_CHECKING:
     from config import Config
 
     from .questionnaire import Answers
+
+
+@dataclass
+class Beat:
+    """One story beat with its own place and activity (so pages vary).
+
+    ``activity`` is fed to both the stanza (poem matches the activity) and the
+    image prompt (image shows the activity) — keeping poem and picture in sync.
+    """
+
+    text: str
+    place: str
+    activity: str
 
 
 _FEW_SHOT_SYSTEM = """\
@@ -31,15 +45,26 @@ A perfect way for days to end.
 
 
 def _outline_messages(answers: "Answers", num_pages: int) -> list[dict]:
+    activities_hint = (
+        f"Favourite activities to draw from (use as inspiration, invent more so "
+        f"every page is different): {answers.favourite_activities}\n"
+        if answers.favourite_activities.strip()
+        else ""
+    )
     user = (
-        f"Write a {num_pages}-beat story outline for a children's picture book.\n"
+        f"Plan a {num_pages}-beat story for a children's picture book.\n"
         f"Child: {answers.child_name} ({answers.pronoun})\n"
         f"Theme: {answers.theme}\n"
-        f"Setting: {answers.setting}\n"
+        f"Overall setting flavour: {answers.setting}\n"
         f"Favourite animal companion: {answers.favourite_animal}\n"
-        f"Loved one who appears: {answers.loved_one}\n\n"
-        f'Return JSON with a single key "beats" whose value is a list of '
-        f"{num_pages} one-sentence story beats."
+        f"Loved one who appears: {answers.loved_one}\n"
+        f"{activities_hint}\n"
+        f"Make every page DIFFERENT: each beat happens in a DIFFERENT place and "
+        f"shows the child doing a DIFFERENT activity.\n"
+        f'Return JSON with a single key "beats": a list of {num_pages} objects, '
+        f'each with keys "beat" (one sentence describing what happens), '
+        f'"place" (where it happens), and "activity" (what the child is doing, '
+        f"e.g. cooking, bathing, painting)."
     )
     return [
         {"role": "system", "content": _FEW_SHOT_SYSTEM},
@@ -47,8 +72,31 @@ def _outline_messages(answers: "Answers", num_pages: int) -> list[dict]:
     ]
 
 
+def _coerce_beat(raw, answers: "Answers", idx: int) -> "Beat":
+    """Build a Beat from a (possibly messy) LLM beat object.
+
+    Tolerates a plain string or a dict missing keys: place falls back to the
+    overall setting, activity to a favourite activity (or a generic verb).
+    """
+    if isinstance(raw, dict):
+        text = str(raw.get("beat") or raw.get("text") or "").strip()
+        place = str(raw.get("place") or "").strip()
+        activity = str(raw.get("activity") or "").strip()
+    else:
+        text, place, activity = str(raw).strip(), "", ""
+
+    if not place:
+        place = answers.setting
+    if not activity:
+        hints = [a.strip() for a in answers.favourite_activities.split(",") if a.strip()]
+        activity = hints[idx % len(hints)] if hints else "playing"
+    if not text:
+        text = f"{answers.child_name} enjoys {activity} in {place}"
+    return Beat(text=text, place=place, activity=activity)
+
+
 def _stanza_messages(
-    beat: str,
+    beat: "Beat",
     beat_idx: int,
     prior_stanzas: list[str],
     answers: "Answers",
@@ -63,7 +111,9 @@ def _stanza_messages(
     user = (
         f"Write stanza {beat_idx + 1} of {config.num_pages} "
         f"({config.lines_per_page} lines, AABB or ABAB rhyme).\n"
-        f"Scene: {beat}\n"
+        f"Scene: {beat.text}\n"
+        f"Place: {beat.place}\n"
+        f"The poem MUST be about this activity: {beat.activity}\n"
         f"Child: {answers.child_name} ({answers.pronoun}), "
         f"{answers.hair_color} hair, {answers.skin_tone} skin.\n"
         f"Companion: {answers.favourite_animal}."
@@ -75,8 +125,8 @@ def _stanza_messages(
     ]
 
 
-def _title_messages(answers: "Answers", outline: list[str]) -> list[dict]:
-    beats_summary = "; ".join(outline[:3])
+def _title_messages(answers: "Answers", outline: list["Beat"]) -> list[dict]:
+    beats_summary = "; ".join(b.text for b in outline[:3])
     user = (
         f"Create a short, child-friendly title (5 words or fewer) for a picture book "
         f"about {answers.child_name}.\n"
@@ -119,8 +169,8 @@ class StoryWriter:
 
     # -- generation ----------------------------------------------------------
 
-    def generate_outline(self, answers: "Answers") -> list[str]:
-        """Return ``config.num_pages`` one-line story beats."""
+    def generate_outline(self, answers: "Answers") -> list["Beat"]:
+        """Return ``config.num_pages`` beats, each with its own place + activity."""
         messages = _outline_messages(answers, self.config.num_pages)
         resp = self._llm.create_chat_completion(
             messages=messages,
@@ -130,10 +180,10 @@ class StoryWriter:
         )
         content = resp["choices"][0]["message"]["content"]
         data = json.loads(content)
-        beats = data.get("beats", [])
-        return [str(b) for b in beats[: self.config.num_pages]]
+        raw = data.get("beats", [])[: self.config.num_pages]
+        return [_coerce_beat(b, answers, i) for i, b in enumerate(raw)]
 
-    def generate_stanzas(self, outline: list[str], answers: "Answers") -> list[str]:
+    def generate_stanzas(self, outline: list["Beat"], answers: "Answers") -> list[str]:
         """Return one rhyming stanza (``config.lines_per_page`` lines) per beat."""
         stanzas: list[str] = []
         for i, beat in enumerate(outline):

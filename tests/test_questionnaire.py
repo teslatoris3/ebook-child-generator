@@ -31,20 +31,25 @@ def test_unsafe_filesystem_chars_in_name_raise(valid_answers, bad_char):
         a.validate()
 
 
-# --- dropdown catalog guards ---
+# --- custom values are allowed (dropdowns accept typed input) ---
 
-@pytest.mark.parametrize("field,catalog", [
-    ("pronoun", PRONOUNS),
-    ("hair_color", HAIR_COLORS),
-    ("skin_tone", SKIN_TONES),
-    ("favourite_animal", ANIMALS),
-    ("loved_one", LOVED_ONES),
-    ("theme", THEMES),
-    ("setting", SETTINGS),
-    ("art_style", ART_STYLES),
+@pytest.mark.parametrize("field", [
+    "pronoun", "hair_color", "skin_tone", "favourite_animal",
+    "loved_one", "theme", "setting", "art_style",
 ])
-def test_invalid_dropdown_value_raises(valid_answers, field, catalog):
-    a = dataclasses.replace(valid_answers, **{field: "__not_in_catalog__"})
+def test_custom_value_is_allowed(valid_answers, field):
+    """Fields accept values outside their catalog (user can type their own)."""
+    a = dataclasses.replace(valid_answers, **{field: "something custom"})
+    a.validate()  # must not raise
+
+
+@pytest.mark.parametrize("field", [
+    "pronoun", "hair_color", "skin_tone", "favourite_animal",
+    "loved_one", "theme", "setting", "art_style",
+])
+def test_empty_required_field_raises(valid_answers, field):
+    """Required art/story fields must still be non-empty."""
+    a = dataclasses.replace(valid_answers, **{field: "   "})
     with pytest.raises(ValueError, match=field):
         a.validate()
 
@@ -63,3 +68,15 @@ def test_all_catalog_values_are_valid(valid_answers, field, catalog):
     for value in catalog:
         a = dataclasses.replace(valid_answers, **{field: value})
         a.validate()  # must not raise
+
+
+# --- favourite_activities (free text, optional) ---
+
+def test_favourite_activities_optional(valid_answers):
+    a = dataclasses.replace(valid_answers, favourite_activities="")
+    a.validate()  # empty is fine — LLM invents activities
+
+
+def test_favourite_activities_free_text_ok(valid_answers):
+    a = dataclasses.replace(valid_answers, favourite_activities="cooking, bathing, brushing teeth")
+    a.validate()

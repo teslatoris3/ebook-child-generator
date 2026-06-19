@@ -15,4 +15,5 @@ def valid_answers() -> Answers:
         theme="being brave",
         setting="enchanted forest",
         art_style="watercolor children's book",
+        favourite_activities="cooking, painting, bathing",
     )

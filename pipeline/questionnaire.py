@@ -36,6 +36,11 @@ ART_STYLES = [
     "crayon doodle",
     "classic storybook illustration",
 ]
+# Suggested kid activities (hints for the free-text favourite_activities field).
+ACTIVITIES = [
+    "cooking", "playing", "bathing", "reading", "painting",
+    "gardening", "dancing", "building blocks", "watching cartoons", "exercising",
+]
 
 # --- Value -> prompt-fragment maps (consumed by prompts.py) -----------------
 # How the hero is described visually for the image prompts.
@@ -61,29 +66,31 @@ class Answers:
     theme: str
     setting: str
     art_style: str
+    favourite_activities: str = ""  # free text, e.g. "cooking, bathing, brushing"
 
     _UNSAFE_FS_CHARS = frozenset(r'\/:*?"<>|')
+    # Fields offered as dropdowns but which also accept a typed custom value;
+    # they must be non-empty but need NOT be in their catalog.
+    _REQUIRED_TEXT_FIELDS = (
+        "pronoun", "hair_color", "skin_tone", "favourite_animal",
+        "loved_one", "theme", "setting", "art_style",
+    )
 
     def validate(self) -> None:
-        """Raise ``ValueError`` if any dropdown value is out of its catalog."""
+        """Validate inputs. Catalog values are *suggestions*: any non-empty typed
+        value is accepted (the UI allows custom entries). Only the child name is
+        strictly guarded (non-empty + filesystem-safe). ``favourite_activities``
+        is optional free text.
+        """
         if not self.child_name or not self.child_name.strip():
             raise ValueError("child_name must not be empty")
         if any(c in self._UNSAFE_FS_CHARS for c in self.child_name):
             raise ValueError(f"child_name contains filesystem-unsafe character: {self.child_name!r}")
 
-        catalog_checks = [
-            ("pronoun", self.pronoun, PRONOUNS),
-            ("hair_color", self.hair_color, HAIR_COLORS),
-            ("skin_tone", self.skin_tone, SKIN_TONES),
-            ("favourite_animal", self.favourite_animal, ANIMALS),
-            ("loved_one", self.loved_one, LOVED_ONES),
-            ("theme", self.theme, THEMES),
-            ("setting", self.setting, SETTINGS),
-            ("art_style", self.art_style, ART_STYLES),
-        ]
-        for field, value, catalog in catalog_checks:
-            if value not in catalog:
-                raise ValueError(f"{field}={value!r} is not in the allowed catalog")
+        for field in self._REQUIRED_TEXT_FIELDS:
+            value = getattr(self, field)
+            if not value or not str(value).strip():
+                raise ValueError(f"{field} must not be empty")
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)

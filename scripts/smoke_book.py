@@ -32,6 +32,7 @@ def main() -> None:
         theme="being brave",
         setting="enchanted forest",
         art_style="watercolor children's book",
+        favourite_activities="cooking, bathing, painting, dancing, reading",
     )
 
     config = Config()

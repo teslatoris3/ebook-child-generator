@@ -32,10 +32,14 @@ class FakeWriter:
         self.events.append("unload")
 
     def generate_outline(self, answers):
-        return [f"beat {i}" for i in range(self._num_pages)]
+        from pipeline.story import Beat
+        return [
+            Beat(text=f"beat {i}", place=f"place {i}", activity=f"activity {i}")
+            for i in range(self._num_pages)
+        ]
 
     def generate_stanzas(self, outline, answers):
-        return [f"stanza for {b}\nline two\nline three\nline four" for b in outline]
+        return [f"stanza about {b.activity}\nline two\nline three\nline four" for b in outline]
 
     def generate_title(self, answers, outline):
         return f"{answers.child_name}'s Adventure"
@@ -172,7 +176,7 @@ def test_generate_unloads_writer_before_loading_studio(gen, valid_answers):
 
 def test_generate_validates_answers(gen, valid_answers):
     import dataclasses
-    bad = dataclasses.replace(valid_answers, pronoun="alien")
+    bad = dataclasses.replace(valid_answers, child_name="")  # empty name is invalid
     with pytest.raises(ValueError):
         list(gen.generate(bad))
 

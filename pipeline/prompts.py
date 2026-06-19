@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .questionnaire import Answers
+    from .story import Beat
 
 # Shared negative prompt for every image (kid-safe + quality).
 NEGATIVE_PROMPT = (
@@ -20,7 +21,8 @@ NEGATIVE_PROMPT = (
 def character_sheet(answers: "Answers") -> str:
     """Frozen visual description of the hero child, reused on every page."""
     from .questionnaire import PRONOUN_DESC
-    desc = PRONOUN_DESC[answers.pronoun]
+    # Custom typed pronouns fall back to "a little <value>".
+    desc = PRONOUN_DESC.get(answers.pronoun, f"a little {answers.pronoun}")
     return f"{desc} with {answers.hair_color} hair and {answers.skin_tone} skin, big friendly eyes"
 
 
@@ -29,22 +31,29 @@ def companion_desc(answers: "Answers") -> str:
     return f"a friendly little {answers.favourite_animal} companion"
 
 
-def page_image_prompt(beat: str, answers: "Answers") -> str:
-    """Full positive prompt for one page's illustration."""
+def page_image_prompt(beat: "Beat", answers: "Answers") -> str:
+    """Full positive prompt for one page's illustration.
+
+    Built from the beat's own place + activity (so every page differs and the
+    image matches the poem). Hero and companion are listed plainly together —
+    the framing that reliably renders both at SD 1.5 / 4 GB (see the scene
+    prototype). Crowds of 4+ characters are not reliable at this model size.
+    """
     from .questionnaire import ART_STYLE_FRAGMENT
-    style = ART_STYLE_FRAGMENT[answers.art_style]
+    style = ART_STYLE_FRAGMENT.get(answers.art_style, answers.art_style)
     sheet = character_sheet(answers)
     companion = companion_desc(answers)
     return (
-        f"{style}, {sheet}, {companion}, {beat}, "
-        f"in a {answers.setting}, children's book illustration"
+        f"{style}, in {beat.place}: {sheet} {beat.activity}, "
+        f"together with {companion}, {beat.text}, "
+        f"full lively scene, children's book illustration"
     )
 
 
 def cover_image_prompt(title: str, answers: "Answers") -> str:
     """Prompt for the cover hero shot — child front-and-center, title framing."""
     from .questionnaire import ART_STYLE_FRAGMENT
-    style = ART_STYLE_FRAGMENT[answers.art_style]
+    style = ART_STYLE_FRAGMENT.get(answers.art_style, answers.art_style)
     sheet = character_sheet(answers)
     return (
         f"{style}, {sheet}, hero portrait, front and center, "

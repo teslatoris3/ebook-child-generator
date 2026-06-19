@@ -23,3 +23,6 @@ venv/
 # OS / editor
 .DS_Store
 *.swp
+
+# Generated architecture review reports
+architecture-review*.html

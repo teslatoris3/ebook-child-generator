@@ -22,9 +22,17 @@ class Paths:
     """Locations of every model artifact on disk (see CLAUDE.md)."""
 
     models_root: Path = MODELS_ROOT
-    # Text LLM (GGUF, runs via llama-cpp-python).
-    llm: Path = MODELS_ROOT / "llm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
-    llm_fallback: Path = MODELS_ROOT / "llm" / "smollm2-1.7b-instruct-q4_k_m.gguf"
+    # Text LLM (GGUF, runs via llama-cpp-python on CPU).
+    # Gemma-4B follows the per-page "distinct place + activity-matched poem"
+    # instructions far better than the 1.5B models (which reused one place and
+    # wrote near-identical stanzas). Runs ~5.5s/stanza on CPU; GPU offload gave
+    # no speedup and steals VRAM SD needs, so it stays on CPU.
+    llm: Path = Path(
+        "/home/amir/.lmstudio/models/bartowski/"
+        "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive/"
+        "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-IQ4_NL.gguf"
+    )
+    llm_fallback: Path = MODELS_ROOT / "llm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
     # Stable Diffusion 1.5 base (diffusers format dir).
     sd_base: Path = MODELS_ROOT / "sd" / "dreamshaper-8"
     # IP-Adapter weights + CLIP image encoder.
@@ -56,7 +64,11 @@ class Config:
     image_size: tuple[int, int] = (512, 512)
     lcm_steps: int = 6            # LCM-LoRA: 4-8 steps
     guidance_scale: float = 1.5   # low CFG for LCM
-    ip_scale: float = 0.6         # IP-Adapter conditioning strength (child identity)
+    # IP-Adapter conditioning strength (child identity). Lowered from 0.6 -> 0.4
+    # after the scene prototype: at 0.6 the identity lock overpowers the prompt and
+    # the hero ignores the page's activity (same frontal pose every page). At ~0.4
+    # activities/poses render while the child stays recognisable. UI exposes a slider.
+    ip_scale: float = 0.4
     base_seed: int = 0            # 0 -> derive deterministically from child name
 
     # --- Text generation (llama-cpp-python) ---

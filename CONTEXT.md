@@ -8,8 +8,21 @@ defined by the improve-codebase-architecture skill, not here.
 ## Terms
 
 ### Answers
-One filled-in 9-field questionnaire. The single input that defines a book.
+One filled-in questionnaire — the single input that defines a book.
 (`pipeline/questionnaire.py`)
+
+**Inputs accept custom values (relaxes CLAUDE.md's "dropdown-constrained" rule,
+2026-06-19).** The dropdowns are *suggestions*: the UI uses
+`allow_custom_value=True` and the user may type any value. `validate()` therefore
+only guards the child name (non-empty + filesystem-safe) and requires the other
+art/story fields be non-empty — it no longer rejects out-of-catalog values.
+Consumers of catalog→fragment maps (`prompts.py`) fall back to the raw typed
+value, so custom inputs flow straight into prompts. The decision: flexibility for
+places/activities/animals was worth more than guaranteed prompt fragments.
+
+- **favourite_activities** — optional free-text (e.g. "cooking, bathing,
+  brushing"). Seeds the per-page activity planning so each page shows a different
+  activity and its poem matches that activity.
 
 ### Character Sheet
 The frozen visual description of the hero child, reused verbatim on every page
