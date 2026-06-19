@@ -45,10 +45,15 @@ def seed_for(answers: "Answers", page_index: int, config: "Config") -> int:
 
 @dataclass
 class PageRecord:
-    """One page's reproducible state: prompt, seed, and (once rendered) path."""
+    """One page's reproducible state: prompt, seed, stanza, and (once rendered) path.
+
+    The stanza is persisted so a single page can be re-rendered and recomposed
+    (a reroll) without re-running the LLM.
+    """
 
     prompt: str
     seed: int
+    stanza: str = ""
     image_path: str | None = None
 
 
