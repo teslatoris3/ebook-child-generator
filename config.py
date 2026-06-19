@@ -47,6 +47,12 @@ class Config:
     lines_per_page: int = 4
 
     # --- Image generation ---
+    # Spike result (2026-06-19, after re-downloading corrupted UNet+VAE weights):
+    # enable_model_cpu_offload peaks at 1930 MB / 3902 MB (1972 MB headroom),
+    # ~2.8s/page, ~23s for 8 pages. Bare cuda + attention_slicing hits a diffusers
+    # IP-Adapter processor bug (tuple shape) and isn't worth the marginal speedup.
+    # Decision: always use enable_model_cpu_offload on this machine.
+    sd_memory_mode: str = "cpu_offload"   # "cpu_offload" | "attention_slicing"
     image_size: tuple[int, int] = (512, 512)
     lcm_steps: int = 6            # LCM-LoRA: 4-8 steps
     guidance_scale: float = 1.5   # low CFG for LCM
