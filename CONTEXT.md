@@ -38,6 +38,18 @@ prompts on their own. (`pipeline/record.py`)
   + 1 (a deterministic "next" variant); an explicit seed may be passed. The new
   seed is written back to the Book Record so the reroll is reproducible too.
 
+### Model Stack
+A heavy model that owns a device and follows a `load()` / `unload()` lifecycle:
+the StoryWriter (LLM, CPU) and the ImageStudio (SD+IP-Adapter, GPU) are the two
+**adapters** of this seam (a `typing.Protocol`). Naming the seam lets the
+orchestrator depend on the contract, not the concrete stacks, so tests inject a
+fake stack with no GPU/model. (`pipeline/stack.py:ModelStack`)
+
+- **exclusive(stack)** — the one home for the "never two stacks resident on the
+  4&nbsp;GB GPU at once" invariant. A context manager that loads a stack on
+  enter and unloads it on exit, so the previous stack is always freed before the
+  next loads. (`pipeline/stack.py:exclusive`)
+
 ### Book Generator (orchestrator)
 Owns the StoryWriter + ImageStudio for one session and runs the pipeline
 (story → reference → pages → compose → PDF), building the Book Record as it

@@ -9,12 +9,15 @@ from __future__ import annotations
 
 from .device import DevicePolicy, pick_devices
 from .questionnaire import Answers
+from .stack import ModelStack, exclusive
 from .orchestrator import BookGenerator, BookResult, Progress
 
 __all__ = [
     "DevicePolicy",
     "pick_devices",
     "Answers",
+    "ModelStack",
+    "exclusive",
     "BookGenerator",
     "BookResult",
     "Progress",
