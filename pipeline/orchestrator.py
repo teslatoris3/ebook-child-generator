@@ -145,6 +145,43 @@ class BookGenerator:
             stanzas=stanzas,
         )
 
+    def generate_from_description(self, text: str) -> "Iterator[Progress | BookResult]":
+        """Generate a book from a free-text description instead of a filled form.
+
+        The LLM extracts structured ``Answers`` from *text* (in-prompt few-shot,
+        no vector store), then the standard ``generate()`` pipeline runs.  Two
+        ``exclusive(writer)`` cycles are used — one for extraction, one for story
+        — because the writer is CPU-only and the double-load overhead (~10 s) is
+        acceptable relative to total book time.
+        """
+        from .parser import ANSWER_DEFAULTS
+        from .questionnaire import Answers
+
+        yield Progress("parsing", 0, 1, "Reading your description…")
+        with exclusive(self.writer):
+            raw = self.writer.extract_from_prompt(text)
+
+        # Merge extracted values over defaults; drop blanks.
+        merged = {**ANSWER_DEFAULTS, **{k: v for k, v in raw.items() if v and str(v).strip()}}
+        answers = Answers(
+            child_name=merged.get("child_name") or "Hero",
+            character_type=merged.get("character_type", "child"),
+            pronoun=merged.get("pronoun", "she/her"),
+            hair_color=merged.get("hair_color", "brown"),
+            skin_tone=merged.get("skin_tone", "light"),
+            favourite_animal=merged.get("favourite_animal", "cat"),
+            loved_one=merged.get("loved_one", "Mom"),
+            theme=merged.get("theme", "friendship"),
+            setting=merged.get("setting", "magical forest"),
+            art_style=merged.get("art_style", "cartoon children's book"),
+            favourite_activities=merged.get("favourite_activities", ""),
+        )
+        yield Progress(
+            "parsing", 1, 1,
+            f"Creating book for {answers.child_name} the {answers.character_type}…",
+        )
+        yield from self.generate(answers)
+
     def regenerate_page(self, output_dir: Path, page_index: int, new_seed: int | None = None) -> Path:
         """Re-render one page from the stored ``BookRecord`` -> new image path.
 

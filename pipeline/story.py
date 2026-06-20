@@ -217,3 +217,9 @@ class StoryWriter:
             temperature=self.config.llm_temperature,
         )
         return resp["choices"][0]["message"]["content"].strip()
+
+    def extract_from_prompt(self, text: str) -> dict:
+        """Parse a free-text book description → Answers-compatible dict."""
+        from .parser import extract_answers_dict
+
+        return extract_answers_dict(text, self._llm)

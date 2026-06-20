@@ -44,6 +44,21 @@ class FakeWriter:
     def generate_title(self, answers, outline):
         return f"{answers.child_name}'s Adventure"
 
+    def extract_from_prompt(self, text: str) -> dict:
+        return {
+            "child_name": "Parsed Hero",
+            "character_type": "robot",
+            "pronoun": "they/them",
+            "hair_color": "silver",
+            "skin_tone": "silver",
+            "favourite_animal": "cat",
+            "loved_one": "Dad",
+            "theme": "adventure",
+            "setting": "city",
+            "art_style": "cartoon",
+            "favourite_activities": "building, painting",
+        }
+
 
 class FakeStudio:
     """Stand-in ImageStudio: ModelStack lifecycle + tiny solid images."""
@@ -231,3 +246,61 @@ def test_regenerate_page_uses_only_studio(generated):
     gen.regenerate_page(out_dir, 0)
     assert gen.studio.events == ["load", "unload"]
     assert gen.writer.events == []
+
+
+# --- generate_from_description ---
+
+def test_generate_from_description_yields_book_result(gen):
+    events = list(gen.generate_from_description("A brave robot named Bolt"))
+    assert isinstance(events[-1], BookResult)
+
+
+def test_generate_from_description_emits_parsing_progress(gen):
+    events = list(gen.generate_from_description("any description"))
+    parsing = [e for e in events if isinstance(e, Progress) and e.stage == "parsing"]
+    assert len(parsing) >= 1
+
+
+def test_generate_from_description_uses_extracted_child_name(gen):
+    events = list(gen.generate_from_description("a robot"))
+    result = events[-1]
+    # FakeWriter.extract_from_prompt returns child_name="Parsed Hero"
+    assert "Parsed" in result.output_dir.name
+
+
+def test_generate_from_description_calls_extract_from_prompt(gen):
+    calls: list[str] = []
+    orig = gen.writer.extract_from_prompt
+    gen.writer.extract_from_prompt = lambda t: (calls.append(t), orig(t))[1]
+    list(gen.generate_from_description("a dinosaur named Rex"))
+    assert len(calls) == 1
+    assert "Rex" in calls[0]
+
+
+def test_generate_from_description_writes_pdf(gen):
+    events = list(gen.generate_from_description("any description"))
+    result = events[-1]
+    assert result.pdf_path.exists()
+    assert result.pdf_path.read_bytes()[:4] == b"%PDF"
+
+
+def test_generate_from_description_writer_unloads_before_studio_loads(gen):
+    order: list[str] = []
+    orig_w_unload = gen.writer.unload
+    orig_s_load = gen.studio.load
+
+    def w_unload():
+        order.append("writer_unload")
+        orig_w_unload()
+
+    def s_load():
+        order.append("studio_load")
+        orig_s_load()
+
+    gen.writer.unload = w_unload
+    gen.studio.load = s_load
+    list(gen.generate_from_description("any description"))
+    # writer must unload before studio loads (4 GB invariant)
+    last_writer_unload = max(i for i, e in enumerate(order) if e == "writer_unload")
+    first_studio_load = min(i for i, e in enumerate(order) if e == "studio_load")
+    assert last_writer_unload < first_studio_load
