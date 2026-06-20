@@ -31,6 +31,36 @@ def test_character_sheet_child_pronoun(valid_answers):
     assert "young child" in prompts.character_sheet(a)
 
 
+# --- non-human heroes (dinosaur / alien / robot / animal …) ---
+
+def test_character_sheet_dinosaur_names_the_creature(valid_answers):
+    a = dataclasses.replace(valid_answers, character_type="dinosaur")
+    sheet = prompts.character_sheet(a)
+    assert "dinosaur" in sheet
+
+
+def test_character_sheet_non_human_drops_human_hair_skin(valid_answers):
+    """A dinosaur has no 'hair'/'skin'; that human phrasing must not appear."""
+    a = dataclasses.replace(valid_answers, character_type="alien", hair_color="blonde", skin_tone="light")
+    sheet = prompts.character_sheet(a)
+    assert "alien" in sheet
+    assert "hair" not in sheet
+    assert "skin" not in sheet
+
+
+def test_character_sheet_child_type_still_human(valid_answers):
+    """Default character_type='child' keeps the original human description."""
+    a = dataclasses.replace(valid_answers, character_type="child")
+    sheet = prompts.character_sheet(a)
+    assert "hair" in sheet and "skin" in sheet
+
+
+def test_page_prompt_uses_non_human_hero(valid_answers):
+    a = dataclasses.replace(valid_answers, character_type="robot")
+    p = prompts.page_image_prompt(_beat(), a)
+    assert "robot" in p
+
+
 # --- companion_desc ---
 
 def test_companion_desc_contains_animal(valid_answers):

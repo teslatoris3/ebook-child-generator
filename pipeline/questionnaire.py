@@ -9,6 +9,15 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 # --- Dropdown catalogs (anything affecting the art is constrained) ----------
+# What the hero IS. "child" keeps the human hair+skin description; anything else
+# is drawn as that creature (custom values welcome — type "phoenix" if you like).
+CHARACTER_TYPES = [
+    "child", "cat", "dog", "dragon", "dinosaur", "bunny", "bear",
+    "lion", "fox", "unicorn", "robot", "alien", "monster",
+]
+# Types treated as a human child (use pronoun + hair + skin). Everything else is
+# described as a non-human creature.
+HUMAN_CHARACTER_TYPES = frozenset({"child", "girl", "boy", "human", "kid", "baby", "toddler"})
 PRONOUNS = ["girl", "boy", "child"]
 HAIR_COLORS = ["black", "brown", "blonde", "red", "dark curly"]
 SKIN_TONES = ["light", "medium", "tan", "dark"]
@@ -67,13 +76,14 @@ class Answers:
     setting: str
     art_style: str
     favourite_activities: str = ""  # free text, e.g. "cooking, bathing, brushing"
+    character_type: str = "child"   # the hero: child, dinosaur, alien, robot, …
 
     _UNSAFE_FS_CHARS = frozenset(r'\/:*?"<>|')
     # Fields offered as dropdowns but which also accept a typed custom value;
     # they must be non-empty but need NOT be in their catalog.
     _REQUIRED_TEXT_FIELDS = (
         "pronoun", "hair_color", "skin_tone", "favourite_animal",
-        "loved_one", "theme", "setting", "art_style",
+        "loved_one", "theme", "setting", "art_style", "character_type",
     )
 
     def validate(self) -> None:

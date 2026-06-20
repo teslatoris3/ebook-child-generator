@@ -16,6 +16,7 @@ from pipeline.questionnaire import (
     ANIMALS,
     ART_STYLES,
     Answers,
+    CHARACTER_TYPES,
     HAIR_COLORS,
     LOVED_ONES,
     PRONOUNS,
@@ -29,6 +30,7 @@ CONFIG = Config()
 
 def _on_generate(
     child_name: str,
+    character_type: str,
     pronoun: str,
     hair_color: str,
     skin_tone: str,
@@ -47,6 +49,7 @@ def _on_generate(
     """
     answers = Answers(
         child_name=child_name,
+        character_type=character_type,
         pronoun=pronoun,
         hair_color=hair_color,
         skin_tone=skin_tone,
@@ -76,11 +79,16 @@ def build_ui() -> "gr.Blocks":
         gr.Markdown("# 📖 Kids Ebook Generator\nMake a personalized rhyming picture book.")
         with gr.Row():
             with gr.Column(scale=1):
-                child_name = gr.Textbox(label="Child's name")
+                child_name = gr.Textbox(label="Hero's name")
                 # allow_custom_value: dropdowns are suggestions; user may type their own.
-                pronoun = gr.Dropdown(PRONOUNS, label="Child is a…", value=PRONOUNS[0], allow_custom_value=True)
-                hair_color = gr.Dropdown(HAIR_COLORS, label="Hair color", value=HAIR_COLORS[0], allow_custom_value=True)
-                skin_tone = gr.Dropdown(SKIN_TONES, label="Skin tone", value=SKIN_TONES[0], allow_custom_value=True)
+                character_type = gr.Dropdown(
+                    CHARACTER_TYPES, label="Hero is a…", value=CHARACTER_TYPES[0],
+                    allow_custom_value=True,
+                    info="Child, or any creature — dinosaur, alien, robot, dragon…",
+                )
+                pronoun = gr.Dropdown(PRONOUNS, label="Pronoun", value=PRONOUNS[0], allow_custom_value=True)
+                hair_color = gr.Dropdown(HAIR_COLORS, label="Hair color (if human)", value=HAIR_COLORS[0], allow_custom_value=True)
+                skin_tone = gr.Dropdown(SKIN_TONES, label="Skin / body color", value=SKIN_TONES[0], allow_custom_value=True)
                 favourite_animal = gr.Dropdown(ANIMALS, label="Favourite animal", value=ANIMALS[0], allow_custom_value=True)
                 loved_one = gr.Dropdown(LOVED_ONES, label="Include a loved one", value=LOVED_ONES[0], allow_custom_value=True)
                 theme = gr.Dropdown(THEMES, label="Story is about…", value=THEMES[0], allow_custom_value=True)
@@ -103,7 +111,7 @@ def build_ui() -> "gr.Blocks":
 
         generate_btn.click(
             _on_generate,
-            inputs=[child_name, pronoun, hair_color, skin_tone, favourite_animal,
+            inputs=[child_name, character_type, pronoun, hair_color, skin_tone, favourite_animal,
                     loved_one, theme, setting, art_style, favourite_activities, ip_scale],
             outputs=[status, gallery, pdf_file],
         )

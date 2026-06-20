@@ -32,6 +32,19 @@ class Beat:
     activity: str
 
 
+def _hero_desc(answers: "Answers") -> str:
+    """One-line hero description for story prompts: human child or any creature."""
+    from .questionnaire import HUMAN_CHARACTER_TYPES
+
+    ctype = (answers.character_type or "child").strip()
+    if ctype.lower() in HUMAN_CHARACTER_TYPES:
+        return (
+            f"{answers.child_name} ({answers.pronoun}), "
+            f"{answers.hair_color} hair, {answers.skin_tone} skin"
+        )
+    return f"{answers.child_name}, a {answers.pronoun} {ctype}"
+
+
 _FEW_SHOT_SYSTEM = """\
 You write rhyming children's picture-book text for ages 3-6.
 Each stanza is exactly 4 lines with an AABB or ABAB rhyme scheme.
@@ -53,7 +66,7 @@ def _outline_messages(answers: "Answers", num_pages: int) -> list[dict]:
     )
     user = (
         f"Plan a {num_pages}-beat story for a children's picture book.\n"
-        f"Child: {answers.child_name} ({answers.pronoun})\n"
+        f"Hero: {_hero_desc(answers)}\n"
         f"Theme: {answers.theme}\n"
         f"Overall setting flavour: {answers.setting}\n"
         f"Favourite animal companion: {answers.favourite_animal}\n"
@@ -114,8 +127,7 @@ def _stanza_messages(
         f"Scene: {beat.text}\n"
         f"Place: {beat.place}\n"
         f"The poem MUST be about this activity: {beat.activity}\n"
-        f"Child: {answers.child_name} ({answers.pronoun}), "
-        f"{answers.hair_color} hair, {answers.skin_tone} skin.\n"
+        f"Hero: {_hero_desc(answers)}.\n"
         f"Companion: {answers.favourite_animal}."
         + prior_block
     )

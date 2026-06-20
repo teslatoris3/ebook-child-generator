@@ -22,11 +22,19 @@ SEP = "-" * 60
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--character-type", default="child", help="hero kind: child, dinosaur, alien, …")
+    ap.add_argument("--name", default="Luna")
+    ap.add_argument("--skin", default="light", help="skin/body color")
+    args = ap.parse_args()
+
     answers = Answers(
-        child_name="Luna",
+        child_name=args.name,
+        character_type=args.character_type,
         pronoun="girl",
         hair_color="blonde",
-        skin_tone="light",
+        skin_tone=args.skin,
         favourite_animal="dragon",
         loved_one="Mom",
         theme="being brave",

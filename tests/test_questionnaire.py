@@ -80,3 +80,26 @@ def test_favourite_activities_optional(valid_answers):
 def test_favourite_activities_free_text_ok(valid_answers):
     a = dataclasses.replace(valid_answers, favourite_activities="cooking, bathing, brushing teeth")
     a.validate()
+
+
+# --- character_type (the hero can be a child, animal, alien, dinosaur, …) ---
+
+def test_character_type_defaults_to_child():
+    from pipeline.questionnaire import Answers
+    a = Answers(
+        child_name="Rex", pronoun="boy", hair_color="brown", skin_tone="tan",
+        favourite_animal="cat", loved_one="Dad", theme="being brave",
+        setting="jungle", art_style="watercolor children's book",
+    )
+    assert a.character_type == "child"
+
+
+def test_character_type_custom_value_ok(valid_answers):
+    a = dataclasses.replace(valid_answers, character_type="dinosaur")
+    a.validate()
+
+
+def test_character_type_empty_raises(valid_answers):
+    a = dataclasses.replace(valid_answers, character_type="  ")
+    with pytest.raises(ValueError, match="character_type"):
+        a.validate()

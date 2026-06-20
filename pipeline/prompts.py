@@ -19,11 +19,26 @@ NEGATIVE_PROMPT = (
 
 
 def character_sheet(answers: "Answers") -> str:
-    """Frozen visual description of the hero child, reused on every page."""
-    from .questionnaire import PRONOUN_DESC
-    # Custom typed pronouns fall back to "a little <value>".
-    desc = PRONOUN_DESC.get(answers.pronoun, f"a little {answers.pronoun}")
-    return f"{desc} with {answers.hair_color} hair and {answers.skin_tone} skin, big friendly eyes"
+    """Frozen visual description of the hero, reused on every page.
+
+    The hero can be a human child OR any creature (``character_type``: dinosaur,
+    alien, robot, cat, …). Humans get the pronoun + hair + skin description; a
+    non-human is named as that creature with a single colour cue — "hair"/"skin"
+    phrasing is dropped because it makes no sense for a dinosaur or robot.
+    """
+    from .questionnaire import HUMAN_CHARACTER_TYPES, PRONOUN_DESC
+
+    ctype = (answers.character_type or "child").strip()
+    if ctype.lower() in HUMAN_CHARACTER_TYPES:
+        # Custom typed pronouns fall back to "a little <value>".
+        desc = PRONOUN_DESC.get(answers.pronoun, f"a little {answers.pronoun}")
+        return f"{desc} with {answers.hair_color} hair and {answers.skin_tone} skin, big friendly eyes"
+
+    # Non-human hero: the creature is the subject; skin_tone carries its colour.
+    return (
+        f"a cute friendly {ctype} character, {answers.skin_tone} colored, "
+        f"big friendly eyes, adorable storybook character"
+    )
 
 
 def companion_desc(answers: "Answers") -> str:

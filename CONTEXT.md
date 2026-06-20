@@ -23,10 +23,17 @@ places/activities/animals was worth more than guaranteed prompt fragments.
 - **favourite_activities** — optional free-text (e.g. "cooking, bathing,
   brushing"). Seeds the per-page activity planning so each page shows a different
   activity and its poem matches that activity.
+- **character_type** — what the hero IS: a human "child" (default) OR any
+  creature (dinosaur, alien, robot, dragon, …; custom values welcome). Humans
+  are described with pronoun + hair + skin; non-humans are drawn as that creature
+  with `skin_tone` as the body colour (the "hair/skin" phrasing is dropped). See
+  `HUMAN_CHARACTER_TYPES` in `pipeline/questionnaire.py`.
 
 ### Character Sheet
-The frozen visual description of the hero child, reused verbatim on every page
-so the child stays recognisable. (`pipeline/prompts.py:character_sheet`)
+The frozen visual description of the hero, reused verbatim on every page so the
+hero stays recognisable. The hero may be a human child or any creature
+(`character_type`); IP-Adapter locks identity the same way either way.
+(`pipeline/prompts.py:character_sheet`)
 
 ### Reference (image)
 The one hero portrait generated up front (IP-Adapter scale 0). Every page is
