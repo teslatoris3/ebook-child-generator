@@ -108,7 +108,8 @@ class BookGenerator:
             for i, (beat, stanza) in enumerate(zip(outline, stanzas)):
                 prompt = prompts.page_image_prompt(beat, answers)
                 seed = seed_for(answers, i, self.config)
-                illustration = self.studio.make_page(prompt, reference, seed)
+                ip_scale = None if beat.hero_present else 0.0
+                illustration = self.studio.make_page(prompt, reference, seed, ip_scale=ip_scale)
                 page = compose.compose_page(illustration, stanza, font)
                 page_path = out_dir / f"page_{i + 1:02d}.png"
                 page.save(page_path)

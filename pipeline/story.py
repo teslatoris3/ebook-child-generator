@@ -25,11 +25,14 @@ class Beat:
 
     ``activity`` is fed to both the stanza (poem matches the activity) and the
     image prompt (image shows the activity) — keeping poem and picture in sync.
+    ``hero_present`` controls whether the child appears on this page; False pages
+    use companion/setting focus and skip IP-Adapter conditioning.
     """
 
     text: str
     place: str
     activity: str
+    hero_present: bool = True
 
 
 def _hero_desc(answers: "Answers") -> str:
@@ -76,8 +79,12 @@ def _outline_messages(answers: "Answers", num_pages: int) -> list[dict]:
         f"shows the child doing a DIFFERENT activity.\n"
         f'Return JSON with a single key "beats": a list of {num_pages} objects, '
         f'each with keys "beat" (one sentence describing what happens), '
-        f'"place" (where it happens), and "activity" (what the child is doing, '
-        f"e.g. cooking, bathing, painting)."
+        f'"place" (where it happens), "activity" (what is happening, '
+        f'e.g. cooking, bathing, painting), and "hero_present" (true or false — '
+        f"whether the hero appears on this page). "
+        f"Plan 2-3 beats where hero_present is false: show the companion exploring "
+        f"alone, the setting, or a quiet moment with the loved one. "
+        f"This makes the story feel dynamic and varied."
     )
     return [
         {"role": "system", "content": _FEW_SHOT_SYSTEM},
@@ -95,8 +102,9 @@ def _coerce_beat(raw, answers: "Answers", idx: int) -> "Beat":
         text = str(raw.get("beat") or raw.get("text") or "").strip()
         place = str(raw.get("place") or "").strip()
         activity = str(raw.get("activity") or "").strip()
+        hero_present = bool(raw.get("hero_present", True))
     else:
-        text, place, activity = str(raw).strip(), "", ""
+        text, place, activity, hero_present = str(raw).strip(), "", "", True
 
     if not place:
         place = answers.setting
@@ -105,7 +113,7 @@ def _coerce_beat(raw, answers: "Answers", idx: int) -> "Beat":
         activity = hints[idx % len(hints)] if hints else "playing"
     if not text:
         text = f"{answers.child_name} enjoys {activity} in {place}"
-    return Beat(text=text, place=place, activity=activity)
+    return Beat(text=text, place=place, activity=activity, hero_present=hero_present)
 
 
 def _stanza_messages(
@@ -121,13 +129,17 @@ def _stanza_messages(
             prior_stanzas
         )
 
+    hero_line = (
+        f"Hero: {_hero_desc(answers)}.\n" if beat.hero_present
+        else f"The hero does NOT appear on this page — focus on the {answers.favourite_animal} or the setting.\n"
+    )
     user = (
         f"Write stanza {beat_idx + 1} of {config.num_pages} "
         f"({config.lines_per_page} lines, AABB or ABAB rhyme).\n"
         f"Scene: {beat.text}\n"
         f"Place: {beat.place}\n"
         f"The poem MUST be about this activity: {beat.activity}\n"
-        f"Hero: {_hero_desc(answers)}.\n"
+        f"{hero_line}"
         f"Companion: {answers.favourite_animal}."
         + prior_block
     )

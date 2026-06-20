@@ -50,17 +50,24 @@ def page_image_prompt(beat: "Beat", answers: "Answers") -> str:
     """Full positive prompt for one page's illustration.
 
     Built from the beat's own place + activity (so every page differs and the
-    image matches the poem). Hero and companion are listed plainly together —
-    the framing that reliably renders both at SD 1.5 / 4 GB (see the scene
-    prototype). Crowds of 4+ characters are not reliable at this model size.
+    image matches the poem). When ``beat.hero_present`` is False the hero is
+    omitted and IP-Adapter conditioning is skipped by the caller (ip_scale=0),
+    giving a companion/setting-focused page without consistency drift.
     """
     from .questionnaire import ART_STYLE_FRAGMENT
     style = ART_STYLE_FRAGMENT.get(answers.art_style, answers.art_style)
-    sheet = character_sheet(answers)
     companion = companion_desc(answers)
+    if beat.hero_present:
+        sheet = character_sheet(answers)
+        return (
+            f"{style}, in {beat.place}: {sheet} {beat.activity}, "
+            f"together with {companion}, {beat.text}, "
+            f"full lively scene, children's book illustration"
+        )
+    # Hero-free page: companion or setting takes the spotlight.
     return (
-        f"{style}, in {beat.place}: {sheet} {beat.activity}, "
-        f"together with {companion}, {beat.text}, "
+        f"{style}, in {beat.place}: {companion} {beat.activity}, "
+        f"{beat.text}, "
         f"full lively scene, children's book illustration"
     )
 

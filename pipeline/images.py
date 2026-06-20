@@ -89,7 +89,7 @@ class ImageStudio:
         from PIL import Image
         from .questionnaire import ART_STYLE_FRAGMENT
 
-        style = ART_STYLE_FRAGMENT[answers.art_style]
+        style = ART_STYLE_FRAGMENT.get(answers.art_style, answers.art_style)
         prompt = (
             f"{style}, portrait of {character_sheet(answers)}, "
             f"front and center, friendly, cute"
