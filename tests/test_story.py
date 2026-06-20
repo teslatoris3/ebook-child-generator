@@ -8,7 +8,8 @@ import pytest
 
 from config import Config
 from pipeline.device import DevicePolicy
-from pipeline.story import StoryWriter
+from pipeline.questionnaire import ANSWER_DEFAULTS
+from pipeline.story import StoryWriter, _extraction_messages
 
 
 # --- Helpers ---
@@ -238,3 +239,100 @@ def test_title_contains_child_name(loaded_writer, valid_answers):
         for m in inst.create_chat_completion.call_args.kwargs.get("messages", [])
     )
     assert valid_answers.child_name in all_content
+
+
+# --- _extraction_messages (free-text → Answers parsing) ---
+
+def test_extraction_messages_embeds_description():
+    text = "A brave little robot named Bolt"
+    msgs = _extraction_messages(text)
+    combined = " ".join(m["content"] for m in msgs)
+    assert text in combined
+
+
+def test_extraction_messages_has_system_and_user():
+    msgs = _extraction_messages("anything")
+    assert len(msgs) == 2
+    assert msgs[0]["role"] == "system"
+    assert msgs[1]["role"] == "user"
+
+
+def test_extraction_messages_asks_for_json():
+    msgs = _extraction_messages("anything")
+    assert "JSON" in msgs[1]["content"]
+
+
+def test_extraction_messages_lists_required_keys():
+    msgs = _extraction_messages("anything")
+    user_text = msgs[1]["content"]
+    for key in ("child_name", "character_type", "pronoun", "skin_tone", "favourite_animal"):
+        assert key in user_text
+
+
+# --- StoryWriter.extract_from_prompt ---
+
+def test_extract_from_prompt_returns_child_name(loaded_writer):
+    w, inst = loaded_writer
+    payload = json.dumps({"child_name": "Bolt", "character_type": "robot"})
+    inst.create_chat_completion.return_value = _llm_resp(payload)
+    result = w.extract_from_prompt("A robot named Bolt")
+    assert result["child_name"] == "Bolt"
+
+
+def test_extract_from_prompt_returns_character_type(loaded_writer):
+    w, inst = loaded_writer
+    payload = json.dumps({"child_name": "Bolt", "character_type": "robot"})
+    inst.create_chat_completion.return_value = _llm_resp(payload)
+    result = w.extract_from_prompt("...")
+    assert result["character_type"] == "robot"
+
+
+def test_extract_from_prompt_uses_json_response_format(loaded_writer):
+    w, inst = loaded_writer
+    inst.create_chat_completion.return_value = _llm_resp(json.dumps({"child_name": "X"}))
+    w.extract_from_prompt("anything")
+    kw = inst.create_chat_completion.call_args.kwargs
+    assert kw.get("response_format", {}).get("type") == "json_object"
+
+
+def test_extract_from_prompt_uses_low_temperature(loaded_writer):
+    w, inst = loaded_writer
+    inst.create_chat_completion.return_value = _llm_resp(json.dumps({"child_name": "X"}))
+    w.extract_from_prompt("anything")
+    kw = inst.create_chat_completion.call_args.kwargs
+    assert kw.get("temperature", 1.0) <= 0.2
+
+
+def test_extract_from_prompt_embeds_text_in_messages(loaded_writer):
+    w, inst = loaded_writer
+    inst.create_chat_completion.return_value = _llm_resp(json.dumps({"child_name": "Luna"}))
+    w.extract_from_prompt("a girl named Luna")
+    msgs = inst.create_chat_completion.call_args.kwargs.get("messages", [])
+    combined = " ".join(m["content"] for m in msgs)
+    assert "a girl named Luna" in combined
+
+
+def test_extract_from_prompt_returns_full_payload(loaded_writer):
+    w, inst = loaded_writer
+    payload = {
+        "child_name": "Zara", "character_type": "alien", "pronoun": "she/her",
+        "hair_color": "purple", "skin_tone": "purple", "favourite_animal": "space cat",
+        "loved_one": "Grandma", "theme": "curiosity", "setting": "outer space",
+        "art_style": "cartoon", "favourite_activities": "painting, reading",
+    }
+    inst.create_chat_completion.return_value = _llm_resp(json.dumps(payload))
+    result = w.extract_from_prompt("...")
+    for key, val in payload.items():
+        assert result[key] == val
+
+
+# --- ANSWER_DEFAULTS (now lives in questionnaire) ---
+
+def test_answer_defaults_has_required_fields():
+    for key in ("character_type", "pronoun", "skin_tone", "loved_one",
+                "theme", "setting", "art_style"):
+        assert key in ANSWER_DEFAULTS
+
+
+def test_answer_defaults_character_type_is_child():
+    assert ANSWER_DEFAULTS["character_type"] == "child"

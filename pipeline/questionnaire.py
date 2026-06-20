@@ -61,6 +61,21 @@ PRONOUN_OBJECT = {"girl": "her", "boy": "him", "child": "them"}
 # tune each independently later (e.g. add trigger words / quality boosters).
 ART_STYLE_FRAGMENT = {s: s for s in ART_STYLES}
 
+# Sensible fallbacks used when free-text description extraction omits a field.
+# Lives here because these are questionnaire-domain defaults, not parser knowledge.
+ANSWER_DEFAULTS: dict[str, str] = {
+    "character_type": "child",
+    "pronoun": "she/her",
+    "hair_color": "brown",
+    "skin_tone": "light",
+    "favourite_animal": "cat",
+    "loved_one": "Mom",
+    "theme": "friendship",
+    "setting": "magical forest",
+    "art_style": "cartoon children's book",
+    "favourite_activities": "",
+}
+
 
 @dataclass
 class Answers:

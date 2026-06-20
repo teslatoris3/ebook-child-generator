@@ -154,8 +154,7 @@ class BookGenerator:
         — because the writer is CPU-only and the double-load overhead (~10 s) is
         acceptable relative to total book time.
         """
-        from .parser import ANSWER_DEFAULTS
-        from .questionnaire import Answers
+        from .questionnaire import ANSWER_DEFAULTS, Answers
 
         yield Progress("parsing", 0, 1, "Reading your description…")
         with exclusive(self.writer):
